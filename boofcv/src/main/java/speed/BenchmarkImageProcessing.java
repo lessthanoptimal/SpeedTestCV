@@ -1,5 +1,8 @@
 package speed;
 
+import boofcv.abst.feature.detdesc.ConfigCompleteSift;
+import boofcv.abst.feature.detdesc.DetectDescribePoint;
+import boofcv.abst.feature.detect.interest.ConfigFastHessian;
 import boofcv.abst.feature.detect.interest.ConfigGeneralDetector;
 import boofcv.abst.feature.detect.line.DetectLine;
 import boofcv.abst.filter.binary.BinaryContourFinder;
@@ -10,6 +13,8 @@ import boofcv.alg.feature.detect.edge.CannyEdge;
 import boofcv.alg.feature.detect.interest.GeneralFeatureDetector;
 import boofcv.alg.misc.ImageStatistics;
 import boofcv.concurrency.BoofConcurrency;
+import boofcv.core.image.ConvertImage;
+import boofcv.factory.feature.detdesc.FactoryDetectDescribe;
 import boofcv.factory.feature.detect.edge.FactoryEdgeDetectors;
 import boofcv.factory.feature.detect.interest.FactoryDetectPoint;
 import boofcv.factory.feature.detect.line.ConfigHoughFoot;
@@ -22,6 +27,8 @@ import boofcv.factory.filter.blur.FactoryBlurFilter;
 import boofcv.factory.filter.derivative.FactoryDerivative;
 import boofcv.io.image.UtilImageIO;
 import boofcv.struct.ConfigLength;
+import boofcv.struct.feature.BrightFeature;
+import boofcv.struct.image.GrayF32;
 import boofcv.struct.image.GrayS16;
 import boofcv.struct.image.GrayU8;
 import org.openjdk.jmh.annotations.*;
@@ -43,6 +50,7 @@ public class BenchmarkImageProcessing {
     ConfigLength kerLength = ConfigLength.fixed(radius*2+1);
 
     GrayU8 grayU8;
+    GrayF32 grayF32;
     GrayU8 outputU8;
     GrayU8 binaryU8;
 
@@ -62,6 +70,9 @@ public class BenchmarkImageProcessing {
     InputToBinary<GrayU8> threshMean;
     ImageGradient<GrayU8, GrayS16> sobel;
 
+    DetectDescribePoint<GrayF32, BrightFeature> surf;
+    DetectDescribePoint<GrayF32, BrightFeature> sift;
+
     // OpenCV most likely implements just the weighted variant. That's likely because it's used for chessboard detection
     GeneralFeatureDetector<GrayU8,GrayS16> goodFeats;
     GeneralFeatureDetector<GrayU8,GrayS16> goodFeatsW;
@@ -77,6 +88,8 @@ public class BenchmarkImageProcessing {
         grayU8 = UtilImageIO.loadImage("../data/chessboard_large.jpg",GrayU8.class);
         outputU8 = grayU8.createSameShape();
         binaryU8 = grayU8.createSameShape();
+        grayF32 = new GrayF32(grayU8.width,grayU8.height);
+        ConvertImage.convert(grayU8,grayF32);
 
         output1_S16 = new GrayS16(grayU8.width,grayU8.height);
         output2_S16 = new GrayS16(grayU8.width,grayU8.height);
@@ -93,6 +106,10 @@ public class BenchmarkImageProcessing {
         canny = FactoryEdgeDetectors.canny(2,true, false, GrayU8.class, GrayS16.class);
 
         contourA = FactoryBinaryContourFinder.linearExternal();
+
+        surf = FactoryDetectDescribe. surfStable(
+                new ConfigFastHessian(0, 2, 500, 2, 9, 4, 4), null, null,GrayF32.class);
+        sift = FactoryDetectDescribe. sift(new ConfigCompleteSift());
 
         // TODO replace with image loaded from disk
         threshMean.process(grayU8, binaryU8);
@@ -140,6 +157,18 @@ public class BenchmarkImageProcessing {
     public void canny() {
         canny.process(grayU8,10,100,null);
         // TODO tune so that the number of points matches opencv
+    }
+
+    @Benchmark
+    public void sift() {
+        // TODO tune so that libraries match number of detected features
+        sift.detect(grayF32);
+    }
+
+    @Benchmark
+    public void surf() {
+        // TODO tune so that libraries match number of detected features
+        surf.detect(grayF32);
     }
 
     @Benchmark

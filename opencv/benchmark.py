@@ -3,7 +3,6 @@ import statistics
 import time
 import numpy as np
 
-num_trials = 10
 image_path = "../data/chessboard_large.jpg"
 
 # NOTE: OpenCV by RGB into Gray using a weighted average. BoofCV uses just the average
@@ -46,9 +45,14 @@ def computeCanny():
 # SIFT and SURF are not included in the standard distribution of Python OpenCV due to legal concerns
 # Doing a custom build of OpenCV is beyond the scope scope of this benchmark since its only supposed to
 # include what's easily available
-# sift = cv2.xfeatures2d.SIFT_create()
-# def detectSift():
-#     sift.detectAndCompute(img, None)
+if hasattr(cv2, 'xfeatures2d'):
+    sift = cv2.xfeatures2d.SIFT_create()
+    def detectSift():
+        sift.detectAndCompute(img, None)
+
+    surf = cv2.xfeatures2d.SURF_create()
+    def detectSurf():
+        surf.detectAndCompute(img, None)
 
 # TODO load an already thresholded image
 # TODO contour
@@ -65,7 +69,7 @@ def houghLine():
     cv2.HoughLines(img, rho=1, theta=np.pi/180, threshold=100)
     # TODO verify similar results
 
-def benchmark( f ):
+def benchmark( f , num_trials=10):
     times=[]
     for trials in range(num_trials):
         t0 = time.time()
@@ -79,9 +83,14 @@ print("meanThresh      {:.1f} ms".format(benchmark(meanThresh)))
 print("gradient sobel  {:.1f} ms".format(benchmark(gradientSobel)))
 print("histogram       {:.1f} ms".format(benchmark(computeHistogram)))
 print("canny           {:.1f} ms".format(benchmark(computeCanny)))
+if hasattr(cv2, 'xfeatures2d'):
+    print("sift            {:.1f} ms".format(benchmark(detectSift, 10)))
+    print("surf            {:.1f} ms".format(benchmark(detectSurf, 10)))
+else:
+    print("Skipping SIFT and SURF. Not installed")
 print("contour         {:.1f} ms".format(benchmark(contour)))
 print("good features   {:.1f} ms".format(benchmark(goodFeatures)))
-print("hough polar     {:.1f} ms".format(benchmark(houghLine)))
+print("hough polar     {:.1f} ms".format(benchmark(houghLine, 10)))
 
 print()
 print("Done!")

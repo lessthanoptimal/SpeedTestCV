@@ -18,7 +18,7 @@ repositories {
 
 dependencies {
     ['boofcv-core','boofcv-swing','boofcv-ffmpeg','demonstrations'].each
-            { String a -> compile group: 'org.boofcv', name: a, version: '0.33-SNAPSHOT' }
+            { String a -> compile group: 'org.boofcv', name: a, version: '0.33.1' }
     
     ['core','generator-annprocess'].each { String a->
         compile('org.openjdk.jmh:jmh-'+a+':1.19') // don't upgrade to 1.21! much slower
