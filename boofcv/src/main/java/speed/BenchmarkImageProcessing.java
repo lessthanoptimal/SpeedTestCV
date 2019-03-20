@@ -57,8 +57,8 @@ public class BenchmarkImageProcessing {
     GrayS16 output1_S16;
     GrayS16 output2_S16;
 
-    // see python comments for these values
-    ConfigGeneralDetector configGoodFeats = new ConfigGeneralDetector(-1,10,0.0000001f);
+    // tuned to detect 3000 features in unweighted variant
+    ConfigGeneralDetector configGoodFeats = new ConfigGeneralDetector(-1,10,6e4f);
 
     int[] histogram = new int[256];
 
@@ -98,6 +98,7 @@ public class BenchmarkImageProcessing {
         gaussianBlur = FactoryBlurFilter.gaussian(GrayU8.class,-1,5);
         threshMean = FactoryThresholdBinary.localMean(kerLength,1.0,true,GrayU8.class);
         sobel = FactoryDerivative.sobel(GrayU8.class,GrayS16.class);
+
         goodFeats = FactoryDetectPoint.createShiTomasi(configGoodFeats,false,GrayS16.class);
         goodFeatsW = FactoryDetectPoint.createShiTomasi(configGoodFeats,true,GrayS16.class);
         houghPolar = FactoryDetectLineAlgs.houghPolar(configHoughP,GrayU8.class,GrayS16.class);
@@ -107,9 +108,16 @@ public class BenchmarkImageProcessing {
 
         contourA = FactoryBinaryContourFinder.linearExternal();
 
-        surf = FactoryDetectDescribe. surfStable(
-                new ConfigFastHessian(0, 2, 500, 2, 9, 4, 4), null, null,GrayF32.class);
-        sift = FactoryDetectDescribe. sift(new ConfigCompleteSift());
+        // tuned to detect 10,000 features with the same number of scales as the original paper
+        // the fast variant is used because last I checked OpenCV's implementation had poor stability, much worse
+        // than "stable" variant and a bit worse than the "fast" variant. This is more comparable.
+        surf = FactoryDetectDescribe. surfFast(
+                new ConfigFastHessian(14, 2, -1, 2, 9, 4, 4), null, null,GrayF32.class);
+
+        // This tells it to use 6 octaves, since 0 to 5 is inclusive. The original paper used -1 to 5.
+        // This is a bit tricky since different libraries interpret this variable differently.
+        // Number of detected features was turned to be about 10,000
+        sift = FactoryDetectDescribe.sift(new ConfigCompleteSift(0,5,12000));
 
         // TODO replace with image loaded from disk
         threshMean.process(grayU8, binaryU8);
@@ -132,45 +140,49 @@ public class BenchmarkImageProcessing {
 
     @Benchmark
     public void goodFeatures() {
-        // the concurrent code here seems to be barely utilized
+        // OpenCV implements the unweighted variant
         sobel.process(grayU8, output1_S16,output2_S16);
         goodFeats.process(grayU8,output1_S16,output2_S16,null,null,null);
+//        System.out.println("Shi-Tomasi detected "+goodFeats.getMaximums().size);
     }
 
-    @Benchmark
-    public void goodFeaturesWeighted() {
-        sobel.process(grayU8, output1_S16,output2_S16);
-        goodFeatsW.process(grayU8,output1_S16,output2_S16,null,null,null);
-    }
+//    @Benchmark
+//    public void goodFeaturesWeighted() {
+//        sobel.process(grayU8, output1_S16,output2_S16);
+//        goodFeatsW.process(grayU8,output1_S16,output2_S16,null,null,null);
+//    }
 
+    // TODO tune
     @Benchmark
     public void houghPolar() {
         houghPolar.detect(grayU8);
     }
 
+    // TODO tune
     @Benchmark
     public void houghFoot() {
         houghFoot.detect(grayU8);
     }
 
+    // TODO tune
     @Benchmark
     public void canny() {
         canny.process(grayU8,10,100,null);
-        // TODO tune so that the number of points matches opencv
     }
 
     @Benchmark
     public void sift() {
-        // TODO tune so that libraries match number of detected features
         sift.detect(grayF32);
+//        System.out.println("SIFT Detected = "+sift.getNumberOfFeatures());
     }
 
     @Benchmark
     public void surf() {
-        // TODO tune so that libraries match number of detected features
         surf.detect(grayF32);
+//        System.out.println("SURF Detected = "+surf.getNumberOfFeatures());
     }
 
+    // TODO tune
     @Benchmark
     public void contourExternal() {
         contourA.process(binaryU8);

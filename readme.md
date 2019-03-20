@@ -26,6 +26,18 @@ Rules:
 6) Virtual machine environments are allowed to have a warm up
 7) Use proper micro-benchmarking techniques whenever possible
 
+## Tuning
+
+* Gaussian Blur: radius = 5
+* Local Mean Threshold: radius = 5
+* Canny:
+* Contour: External contours only
+* Corners: Shi-Tomasi. Unweighted variant. radius=21. 3000 features
+* Hough Line Polar: 
+* SIFT: 5 octaves, 10,000 features
+* SURF: 4 octaves, 4 scales, 10,000 features
+
+
 ## Running The Benchmark
 
 ## Comparing Implementations
