@@ -9,7 +9,6 @@ import boofcv.abst.filter.binary.BinaryContourFinder;
 import boofcv.abst.filter.binary.InputToBinary;
 import boofcv.abst.filter.blur.BlurFilter;
 import boofcv.abst.filter.derivative.ImageGradient;
-import boofcv.alg.color.ColorRgb;
 import boofcv.alg.feature.detect.edge.CannyEdge;
 import boofcv.alg.feature.detect.interest.GeneralFeatureDetector;
 import boofcv.alg.filter.binary.ContourPacked;
@@ -27,7 +26,6 @@ import boofcv.factory.filter.binary.FactoryBinaryContourFinder;
 import boofcv.factory.filter.binary.FactoryThresholdBinary;
 import boofcv.factory.filter.blur.FactoryBlurFilter;
 import boofcv.factory.filter.derivative.FactoryDerivative;
-import boofcv.io.image.ConvertBufferedImage;
 import boofcv.io.image.UtilImageIO;
 import boofcv.struct.ConfigLength;
 import boofcv.struct.ConnectRule;
@@ -35,13 +33,11 @@ import boofcv.struct.feature.BrightFeature;
 import boofcv.struct.image.GrayF32;
 import boofcv.struct.image.GrayS16;
 import boofcv.struct.image.GrayU8;
-import boofcv.struct.image.Planar;
 import georegression.struct.line.LineParametric2D_F32;
 import georegression.struct.point.Point2D_I32;
 import org.ddogleg.struct.FastQueue;
 import org.openjdk.jmh.annotations.*;
 
-import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -99,14 +95,12 @@ public class BenchmarkImageProcessing {
 
         grayU8 = UtilImageIO.loadImage("../data/chessboard_large.jpg",GrayU8.class);
         outputU8 = grayU8.createSameShape();
-        grayF32 = new GrayF32(grayU8.width,grayU8.height);
-        ConvertImage.convert(grayU8,grayF32);
 
         binaryU8 = UtilImageIO.loadImage("../data/binary.png",GrayU8.class);
         ThresholdImageOps.threshold(binaryU8,binaryU8,125,true);
 
-        output1_S16 = new GrayS16(grayU8.width,grayU8.height);
-        output2_S16 = new GrayS16(grayU8.width,grayU8.height);
+        output1_S16 = new GrayS16(1,1);
+        output2_S16 = new GrayS16(1,1);
 
         // filters must be declared after USE_CONCURRENT has been set or else it won't stick
         gaussianBlur = FactoryBlurFilter.gaussian(GrayU8.class,-1,5);
@@ -192,12 +186,16 @@ public class BenchmarkImageProcessing {
 
     @Benchmark
     public void sift() {
+        checkGrayF32();
+
         sift.detect(grayF32);
 //        System.out.println("SIFT Detected = "+sift.getNumberOfFeatures());
     }
 
     @Benchmark
     public void surf() {
+        checkGrayF32();
+
         surf.detect(grayF32);
 //        System.out.println("SURF Detected = "+surf.getNumberOfFeatures());
     }
@@ -226,6 +224,20 @@ public class BenchmarkImageProcessing {
 //        }
 //        System.out.println();
 //        System.out.println("total = "+total+"  width="+grayU8.width+" "+grayU8.height);
+    }
+
+    /**
+     * This is here to reduce memory footprint for Odroid/Raspberry PI. predeclaring memory that
+     * isn't needed seems to be causing problems
+     */
+    private void checkGrayF32() {
+        if( grayF32 == null ) {
+            grayF32 = new GrayF32(grayU8.width,grayU8.height);
+            ConvertImage.convert(grayU8,grayF32);
+            grayU8 = null;
+            outputU8 = null;
+            binaryU8 = null;
+        }
     }
 
 }
