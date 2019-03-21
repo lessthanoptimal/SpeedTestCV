@@ -4,12 +4,13 @@ import time
 import numpy as np
 
 image_path = "../data/chessboard_large.jpg"
+binary_path = "../data/binary.png"
 
 # NOTE: OpenCV by RGB into Gray using a weighted average. BoofCV uses just the average
 img = cv2.imread(image_path,cv2.IMREAD_GRAYSCALE)
 
-# TODO replace with an image loaded from disk and thresholded
-thresh_img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 0)
+# Binary image. 0 and 255. This matches what OpenCV expects
+img_binary = cv2.imread(binary_path, cv2.IMREAD_GRAYSCALE)
 
 region_radius = 5
 region_width = region_radius*2+1
@@ -29,8 +30,11 @@ def meanThresh():
     cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, region_width, 0)
 
 def computeHistogram():
-    cv2.calcHist([img],[0],None,[256],[0,256])
-    # TODO verify that histogram is similar
+    hist =cv2.calcHist([img],[0],None,[256],[0,256])
+    # for i in range(len(hist)):
+    #     print("[{:3d}] {}".format(i,hist[i]))
+    # print()
+    # print("total = {}".format(sum(hist)))
 
 def goodFeatures():
     # Documentation was ambiguous if this was a weighted or unweighted variant. This ambiguity was resolved
@@ -41,8 +45,16 @@ def goodFeatures():
     # print("Shi-Tomasi count {}".format(len(kp)))
 
 def computeCanny():
-    # TODO tune to match number of points found in boofcv
-    cv2.Canny(img, 10, 100)
+    # OpenCV's canny edge creates a binary image. This isn't very useful by itself. To process the edges you need
+    # to extract the contours from the output binary image. I've used the values specified in an opencv example
+    # https://docs.opencv.org/3.4.3/df/d0d/tutorial_find_contours.html
+    edges = cv2.Canny(img, 15, 110)
+    # print("total canny {}".format((np.asarray(edges) > 100).sum()))
+    # Not approximating chains here since in the general purpose algorithms I've done a chain approximation would
+    # require additional work.
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    # total = sum( len(c) for c in contours )
+    # print("total canny contour {}".format(total))
 
 # SIFT and SURF are not included in the standard distribution of Python OpenCV due to legal concerns
 # Doing a custom build of OpenCV is beyond the scope scope of this benchmark since its only supposed to
@@ -68,14 +80,17 @@ def contour():
     # Code in Validation Boof attempted to replicate the same behavior in both libraries. Configuration
     # values are taken from there.
     # The algorithm in OpenCV and the two contour algorithms in BoofCV operate internally very different
-    cv2.findContours(thresh_img,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
-    # TODO verify similar results
+    # How OpenCV defines external and BoofCV define external is different
+    contours, hierarchy = cv2.findContours(img_binary, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+    # total = sum( len(c) for c in contours )
+    # print("total pixels {}".format(total))
 
 def houghLine():
     # OpenCV contains 3 Hough Line algorithms. CV_HOUGH_STANDARD is the closest to the variants included
     # in boofcv. The other OpenCV variants should have very different behavior based on their description
-    cv2.HoughLines(img, rho=1, theta=np.pi/180, threshold=100)
-    # TODO verify similar results
+
+    lines = cv2.HoughLines(img, rho=5, theta=np.pi/180, threshold=15000)
+    # print("total lines {}".format(len(lines)))
 
 def benchmark( f , num_trials=10):
     times=[]
@@ -89,7 +104,7 @@ def benchmark( f , num_trials=10):
 print("Gaussian Blur   {:.1f} ms".format(benchmark(gaussianBlur)))
 print("meanThresh      {:.1f} ms".format(benchmark(meanThresh)))
 print("gradient sobel  {:.1f} ms".format(benchmark(gradientSobel)))
-print("histogram       {:.1f} ms".format(benchmark(computeHistogram)))
+print("histogram       {:.1f} ms".format(benchmark(computeHistogram,1)))
 print("canny           {:.1f} ms".format(benchmark(computeCanny)))
 if hasattr(cv2, 'xfeatures2d'):
     print("sift            {:.1f} ms".format(benchmark(detectSift, 10)))
@@ -98,7 +113,7 @@ else:
     print("Skipping SIFT and SURF. Not installed")
 print("contour         {:.1f} ms".format(benchmark(contour)))
 print("good features   {:.1f} ms".format(benchmark(goodFeatures)))
-print("hough polar     {:.1f} ms".format(benchmark(houghLine, 10)))
+print("hough polar     {:.1f} ms".format(benchmark(houghLine)))
 
 print()
 print("Done!")

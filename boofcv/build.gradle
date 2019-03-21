@@ -25,6 +25,15 @@ dependencies {
     }
 }
 
+task benchmarkJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'org.openjdk.jmh.Main'
+    }
+    archiveName = "benchmark.jar"
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
 task wrapper(type: Wrapper) {
     distributionType = Wrapper.DistributionType.BIN
     gradleVersion = '4.10.2'

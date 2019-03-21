@@ -26,19 +26,27 @@ Rules:
 6) Virtual machine environments are allowed to have a warm up
 7) Use proper micro-benchmarking techniques whenever possible
 
+## Building and Running
+
+See readme.md inside each libraries' directory for instructions.
+
 ## Tuning
+
+Tuning the algorithms so that they produce similar results is difficult to impossible. For algorithms where the speed
+depends significantly on the number of features found the target features as selected to be what looked like a 
+reasonable number of an image of this size. If the output from the implementation isn't in a usable format, then additional
+processing was done. Examples are Canny in OpenCV where it outputs a binary image but you need a
+list of pixels in the contour and in BoofCV the contour is computed in a compact format, which is then decompressed 
+into a pixel format.
 
 * Gaussian Blur: radius = 5
 * Local Mean Threshold: radius = 5
-* Canny:
-* Contour: External contours only
+* Canny: Output edge pixel chains. 550,000 unique pixels in chains expected.
+* Contour: External contours only. 4-connect rule. Should find around 1,111,793 points
 * Corners: Shi-Tomasi. Unweighted variant. radius=21. 3000 features
-* Hough Line Polar: 
+* Hough Line Polar: resolutions( angle=1 deg, range= 5 pix) tune to detect 500 lines
 * SIFT: 5 octaves, 10,000 features
 * SURF: 4 octaves, 4 scales, 10,000 features
-
-
-## Running The Benchmark
 
 ## Comparing Implementations
 

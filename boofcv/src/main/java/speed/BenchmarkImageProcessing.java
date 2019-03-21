@@ -9,8 +9,11 @@ import boofcv.abst.filter.binary.BinaryContourFinder;
 import boofcv.abst.filter.binary.InputToBinary;
 import boofcv.abst.filter.blur.BlurFilter;
 import boofcv.abst.filter.derivative.ImageGradient;
+import boofcv.alg.color.ColorRgb;
 import boofcv.alg.feature.detect.edge.CannyEdge;
 import boofcv.alg.feature.detect.interest.GeneralFeatureDetector;
+import boofcv.alg.filter.binary.ContourPacked;
+import boofcv.alg.filter.binary.ThresholdImageOps;
 import boofcv.alg.misc.ImageStatistics;
 import boofcv.concurrency.BoofConcurrency;
 import boofcv.core.image.ConvertImage;
@@ -21,18 +24,25 @@ import boofcv.factory.feature.detect.line.ConfigHoughFoot;
 import boofcv.factory.feature.detect.line.ConfigHoughPolar;
 import boofcv.factory.feature.detect.line.FactoryDetectLineAlgs;
 import boofcv.factory.filter.binary.FactoryBinaryContourFinder;
-import boofcv.factory.filter.binary.FactoryBinaryImageOps;
 import boofcv.factory.filter.binary.FactoryThresholdBinary;
 import boofcv.factory.filter.blur.FactoryBlurFilter;
 import boofcv.factory.filter.derivative.FactoryDerivative;
+import boofcv.io.image.ConvertBufferedImage;
 import boofcv.io.image.UtilImageIO;
 import boofcv.struct.ConfigLength;
+import boofcv.struct.ConnectRule;
 import boofcv.struct.feature.BrightFeature;
 import boofcv.struct.image.GrayF32;
 import boofcv.struct.image.GrayS16;
 import boofcv.struct.image.GrayU8;
+import boofcv.struct.image.Planar;
+import georegression.struct.line.LineParametric2D_F32;
+import georegression.struct.point.Point2D_I32;
+import org.ddogleg.struct.FastQueue;
 import org.openjdk.jmh.annotations.*;
 
+import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -62,8 +72,10 @@ public class BenchmarkImageProcessing {
 
     int[] histogram = new int[256];
 
-    ConfigHoughPolar configHoughP = new ConfigHoughPolar(1,100,1,Math.PI/180.0,50,0);
+    ConfigHoughPolar configHoughP = new ConfigHoughPolar(1,1650,5,Math.PI/180.0,50,0);
     ConfigHoughFoot configHoughF = new ConfigHoughFoot(2,100,5,50,0);
+
+    FastQueue<Point2D_I32> points = new FastQueue<>(Point2D_I32.class,true);
 
     // use filter interface since it's easier to profile
     BlurFilter<GrayU8> gaussianBlur;
@@ -87,9 +99,11 @@ public class BenchmarkImageProcessing {
 
         grayU8 = UtilImageIO.loadImage("../data/chessboard_large.jpg",GrayU8.class);
         outputU8 = grayU8.createSameShape();
-        binaryU8 = grayU8.createSameShape();
         grayF32 = new GrayF32(grayU8.width,grayU8.height);
         ConvertImage.convert(grayU8,grayF32);
+
+        binaryU8 = UtilImageIO.loadImage("../data/binary.png",GrayU8.class);
+        ThresholdImageOps.threshold(binaryU8,binaryU8,125,true);
 
         output1_S16 = new GrayS16(grayU8.width,grayU8.height);
         output2_S16 = new GrayS16(grayU8.width,grayU8.height);
@@ -107,6 +121,7 @@ public class BenchmarkImageProcessing {
         canny = FactoryEdgeDetectors.canny(2,true, false, GrayU8.class, GrayS16.class);
 
         contourA = FactoryBinaryContourFinder.linearExternal();
+        contourA.setConnectRule(ConnectRule.FOUR);
 
         // tuned to detect 10,000 features with the same number of scales as the original paper
         // the fast variant is used because last I checked OpenCV's implementation had poor stability, much worse
@@ -118,9 +133,6 @@ public class BenchmarkImageProcessing {
         // This is a bit tricky since different libraries interpret this variable differently.
         // Number of detected features was turned to be about 10,000
         sift = FactoryDetectDescribe.sift(new ConfigCompleteSift(0,5,12000));
-
-        // TODO replace with image loaded from disk
-        threshMean.process(grayU8, binaryU8);
     }
 
     @Benchmark
@@ -152,22 +164,30 @@ public class BenchmarkImageProcessing {
 //        goodFeatsW.process(grayU8,output1_S16,output2_S16,null,null,null);
 //    }
 
-    // TODO tune
     @Benchmark
     public void houghPolar() {
-        houghPolar.detect(grayU8);
+        List<LineParametric2D_F32> found = houghPolar.detect(grayU8);
+//        System.out.println("Found hough "+found.size());
     }
 
-    // TODO tune
-    @Benchmark
-    public void houghFoot() {
-        houghFoot.detect(grayU8);
-    }
+    // foot is a completely different algorithm from what opencv has
+//    @Benchmark
+//    public void houghFoot() {
+//        houghFoot.detect(grayU8);
+//    }
 
-    // TODO tune
     @Benchmark
     public void canny() {
-        canny.process(grayU8,10,100,null);
+        // BoofCV outputs contour edges. BoofCV has a mandatory blur step which OpenCV doesn't. This
+        // makes it closer to the original paper but probably still shouldn't be mandatory.
+        canny.process(grayU8,5,50,null);
+//        canny.process(grayU8,20,50,null);
+//        List<EdgeContour> contours = canny.getContours();
+//        int total = 0;
+//        for (int i = 0; i < contours.size(); i++) {
+//            total += contours.size();
+//        }
+//        System.out.println("total pixels "+total);
     }
 
     @Benchmark
@@ -182,15 +202,30 @@ public class BenchmarkImageProcessing {
 //        System.out.println("SURF Detected = "+surf.getNumberOfFeatures());
     }
 
-    // TODO tune
     @Benchmark
     public void contourExternal() {
         contourA.process(binaryU8);
+        // Load the contours since they are not usable until loaded
+        List<ContourPacked> contours = contourA.getContours();
+//        int total = 0;
+        for (int i = 0; i < contours.size(); i++) {
+            contourA.loadContour(contours.get(i).id,points);
+//            total += points.size;
+        }
+//        System.out.println("total contours "+total);
     }
 
     @Benchmark
     public void histogram() {
+        // Histogram looks similar to opencv but not exact
         ImageStatistics.histogram(grayU8,0,histogram);
+//        int total = 0;
+//        for (int i = 0; i < histogram.length; i++) {
+//            System.out.printf("[%3d] = %d\n",i,histogram[i]);
+//            total += histogram[i];
+//        }
+//        System.out.println();
+//        System.out.println("total = "+total+"  width="+grayU8.width+" "+grayU8.height);
     }
 
 }
