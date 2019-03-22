@@ -2,6 +2,7 @@ import cv2
 import statistics
 import time
 import numpy as np
+import gc
 
 image_path = "../data/chessboard_large.jpg"
 binary_path = "../data/binary.png"
@@ -93,6 +94,7 @@ def houghLine():
     # print("total lines {}".format(len(lines)))
 
 def benchmark( f , num_trials=10):
+    gc.collect()
     times=[]
     for trials in range(num_trials):
         t0 = time.time()
@@ -101,6 +103,9 @@ def benchmark( f , num_trials=10):
         times.append(t1-t0)
     return statistics.mean(times)*1000
 
+# Trouble with operations not finishing on Raspberry PI. Steps are take below to mitigate memory use
+print("contour         {:.1f} ms".format(benchmark(contour)))
+img_binary = None
 print("Gaussian Blur   {:.1f} ms".format(benchmark(gaussianBlur)))
 print("meanThresh      {:.1f} ms".format(benchmark(meanThresh)))
 print("gradient sobel  {:.1f} ms".format(benchmark(gradientSobel)))
@@ -108,10 +113,11 @@ print("histogram       {:.1f} ms".format(benchmark(computeHistogram,1)))
 print("canny           {:.1f} ms".format(benchmark(computeCanny)))
 if hasattr(cv2, 'xfeatures2d'):
     print("sift            {:.1f} ms".format(benchmark(detectSift, 10)))
+    sift = None
     print("surf            {:.1f} ms".format(benchmark(detectSurf, 10)))
+    surf = None
 else:
     print("Skipping SIFT and SURF. Not installed")
-print("contour         {:.1f} ms".format(benchmark(contour)))
 print("good features   {:.1f} ms".format(benchmark(goodFeatures)))
 print("hough polar     {:.1f} ms".format(benchmark(houghLine)))
 

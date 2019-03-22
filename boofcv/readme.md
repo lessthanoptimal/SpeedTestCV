@@ -4,7 +4,7 @@ JMH is micro benchmark tool and is used to compute performance.
 
 ```bash
 ./gradlew benchmarkJar
-java -jar build/libs/benchmark.jar
+java -Xms1G -jar build/libs/benchmark.jar
 ```
 
 
