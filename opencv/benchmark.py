@@ -61,9 +61,10 @@ def computeCanny():
 # Doing a custom build of OpenCV is beyond the scope scope of this benchmark since its only supposed to
 # include what's easily available
 if hasattr(cv2, 'xfeatures2d'):
-    # This is configured to be similar to the SIFT paper with 5 octaves.
-    # Target of 10,000 features to make comparison between libraries more accurate
-    sift = cv2.xfeatures2d.SIFT_create(nfeatures=10000, nOctaveLayers=5, contrastThreshold=0.04, edgeThreshold=10, sigma=1.6)
+    # This has been configured to be the same as the Lowe's paper. 3 layers per octave.
+    # It's not clear how many octaves are used and if the first layer is at twice the input as recommend by Lowe but
+    # frequently not done due to speed hit
+    sift = cv2.xfeatures2d.SIFT_create(nfeatures=10000, nOctaveLayers=3, contrastThreshold=0.04, edgeThreshold=10, sigma=1.6)
     def detectSift():
         kp,des = sift.detectAndCompute(img, None)
         # print("SIFT found {:d}".format(len(kp)))
