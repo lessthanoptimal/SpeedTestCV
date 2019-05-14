@@ -4,6 +4,7 @@ import boofcv.abst.feature.detdesc.ConfigCompleteSift;
 import boofcv.abst.feature.detdesc.DetectDescribePoint;
 import boofcv.abst.feature.detect.interest.ConfigFastHessian;
 import boofcv.abst.feature.detect.interest.ConfigGeneralDetector;
+import boofcv.abst.feature.detect.interest.ConfigShiTomasi;
 import boofcv.abst.feature.detect.line.DetectLine;
 import boofcv.abst.filter.binary.BinaryContourFinder;
 import boofcv.abst.filter.binary.InputToBinary;
@@ -107,8 +108,11 @@ public class BenchmarkImageProcessing {
         threshMean = FactoryThresholdBinary.localMean(kerLength,1.0,true,GrayU8.class);
         sobel = FactoryDerivative.sobel(GrayU8.class,GrayS16.class);
 
-        goodFeats = FactoryDetectPoint.createShiTomasi(configGoodFeats,false,GrayS16.class);
-        goodFeatsW = FactoryDetectPoint.createShiTomasi(configGoodFeats,true,GrayS16.class);
+        ConfigShiTomasi shiFalse = new ConfigShiTomasi(false,configGoodFeats.radius);
+        ConfigShiTomasi shiTrue = new ConfigShiTomasi(true,configGoodFeats.radius);
+
+        goodFeats = FactoryDetectPoint.createShiTomasi(configGoodFeats,shiFalse,GrayS16.class);
+        goodFeatsW = FactoryDetectPoint.createShiTomasi(configGoodFeats,shiTrue,GrayS16.class);
         houghPolar = FactoryDetectLineAlgs.houghPolar(configHoughP,GrayU8.class,GrayS16.class);
         houghFoot = FactoryDetectLineAlgs.houghFoot(configHoughF,GrayU8.class,GrayS16.class);
 
