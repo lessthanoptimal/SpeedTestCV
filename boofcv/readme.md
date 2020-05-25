@@ -3,8 +3,8 @@
 JMH is micro benchmark tool and is used to compute performance.
 
 ```bash
-./gradlew benchmarkJar
-java -Xms1G -jar build/libs/benchmark.jar
+cd SpeedTestCV/boofcv
+./gradlew jmh
 ```
 
 
@@ -24,4 +24,4 @@ BenchmarkImageProcessing.surf             avgt    5   249.769 ±  49.476  ms/op
 BenchmarkImageProcessing.threshMean       avgt    5    20.495 ±   9.822  ms/op
 ```
 
-On my system, JDK 1.8 and JDK 11 produced similar output.
+On my system, JDK 1.8 and JDK 11 produce similar output.

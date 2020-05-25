@@ -20,9 +20,7 @@ import boofcv.core.image.ConvertImage;
 import boofcv.factory.feature.detdesc.FactoryDetectDescribe;
 import boofcv.factory.feature.detect.edge.FactoryEdgeDetectors;
 import boofcv.factory.feature.detect.interest.FactoryDetectPoint;
-import boofcv.factory.feature.detect.line.ConfigHoughFoot;
-import boofcv.factory.feature.detect.line.ConfigHoughPolar;
-import boofcv.factory.feature.detect.line.FactoryDetectLineAlgs;
+import boofcv.factory.feature.detect.line.*;
 import boofcv.factory.filter.binary.FactoryBinaryContourFinder;
 import boofcv.factory.filter.binary.FactoryThresholdBinary;
 import boofcv.factory.filter.blur.FactoryBlurFilter;
@@ -69,10 +67,10 @@ public class BenchmarkImageProcessing {
 
     int[] histogram = new int[256];
 
-    ConfigHoughPolar configHoughP = new ConfigHoughPolar(1,1650,5,Math.PI/180.0,50,0);
-    ConfigHoughFoot configHoughF = new ConfigHoughFoot(2,100,5,50,0);
-
-    FastQueue<Point2D_I32> points = new FastQueue<>(Point2D_I32.class,true);
+    ConfigHoughGradient configGradient = new ConfigHoughGradient(2,80,5,1f,0);
+    ConfigParamPolar configPolar = new ConfigParamPolar(5,180);
+    ConfigParamFoot configFoot = new ConfigParamFoot(); // configured below too
+    FastQueue<Point2D_I32> points = new FastQueue<>(Point2D_I32::new);
 
     // use filter interface since it's easier to profile
     BlurFilter<GrayU8> gaussianBlur;
@@ -111,10 +109,12 @@ public class BenchmarkImageProcessing {
         ConfigShiTomasi shiFalse = new ConfigShiTomasi(false,configGoodFeats.radius);
         ConfigShiTomasi shiTrue = new ConfigShiTomasi(true,configGoodFeats.radius);
 
+        configFoot.minDistanceFromOrigin = 5;
+
         goodFeats = FactoryDetectPoint.createShiTomasi(configGoodFeats,shiFalse,GrayS16.class);
         goodFeatsW = FactoryDetectPoint.createShiTomasi(configGoodFeats,shiTrue,GrayS16.class);
-        houghPolar = FactoryDetectLineAlgs.houghPolar(configHoughP,GrayU8.class,GrayS16.class);
-        houghFoot = FactoryDetectLineAlgs.houghFoot(configHoughF,GrayU8.class,GrayS16.class);
+        houghPolar = FactoryDetectLine.houghLinePolar(configGradient,configPolar,GrayU8.class);
+        houghFoot = FactoryDetectLine.houghLineFoot(configGradient,configFoot,GrayU8.class);
 
         canny = FactoryEdgeDetectors.canny(2,true, false, GrayU8.class, GrayS16.class);
 
@@ -130,7 +130,7 @@ public class BenchmarkImageProcessing {
         // This tells it to use 6 octaves, since 0 to 5 is inclusive. The original paper used -1 to 5.
         // This is a bit tricky since different libraries interpret this variable differently.
         // Number of detected features was turned to be about 10,000
-        sift = FactoryDetectDescribe.sift(new ConfigCompleteSift(0,5,12000));
+        sift = FactoryDetectDescribe.sift(new ConfigCompleteSift(0,5,12000),GrayF32.class);
     }
 
     @Benchmark
@@ -165,7 +165,7 @@ public class BenchmarkImageProcessing {
     @Benchmark
     public void houghPolar() {
         List<LineParametric2D_F32> found = houghPolar.detect(grayU8);
-//        System.out.println("Found hough "+found.size());
+//        System.out.println("Found Hough "+found.size());
     }
 
     // foot is a completely different algorithm from what opencv has

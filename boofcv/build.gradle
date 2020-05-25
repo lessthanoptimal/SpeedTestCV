@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
 }
 
 group 'speed'
@@ -10,31 +10,38 @@ sourceCompatibility = 1.8
 repositories {
     mavenCentral()
     mavenLocal()
+    jcenter()
+    maven { url = "https://oss.sonatype.org/content/repositories/snapshots/" }
+}
 
-    maven {
-        url = "https://oss.sonatype.org/content/repositories/snapshots/"
+sourceSets {
+    jmh {
+        java {
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+        }
     }
 }
 
 dependencies {
     ['boofcv-core','boofcv-swing','boofcv-ffmpeg','demonstrations'].each
-            { String a -> compile group: 'org.boofcv', name: a, version: '0.34-SNAPSHOT' }
-    
-    ['core','generator-annprocess'].each { String a->
-        compile('org.openjdk.jmh:jmh-'+a+':1.19') // don't upgrade to 1.21! much slower
-    }
+            { String a -> jmhImplementation group: 'org.boofcv', name: a, version: '0.36' }
+
+
+    jmhImplementation(project)
+    jmhImplementation("org.openjdk.jmh:jmh-core:1.19")
+    jmhAnnotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.19")
 }
 
-task benchmarkJar(type: Jar) {
-    manifest {
-        attributes 'Main-Class': 'org.openjdk.jmh.Main'
-    }
-    archiveName = "benchmark.jar"
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
+task jmh(type: JavaExec) {
+    dependsOn("jmhClasses")
+    group = "benchmark"
+    main = "org.openjdk.jmh.Main"
+    classpath = sourceSets["jmh"].runtimeClasspath
+//    args '-h'
 }
 
-task wrapper(type: Wrapper) {
+task wraper(type: Wrapper) {
     distributionType = Wrapper.DistributionType.BIN
-    gradleVersion = '4.10.2'
+    gradleVersion = '6.4.1'
 }
