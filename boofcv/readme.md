@@ -4,7 +4,7 @@ JMH is micro benchmark tool and is used to compute performance.
 
 ```bash
 cd SpeedTestCV/boofcv
-./gradlew jmh
+./gradlew --no-daemon jmh
 ```
 
 

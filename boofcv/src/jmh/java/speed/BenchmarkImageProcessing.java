@@ -28,13 +28,13 @@ import boofcv.factory.filter.derivative.FactoryDerivative;
 import boofcv.io.image.UtilImageIO;
 import boofcv.struct.ConfigLength;
 import boofcv.struct.ConnectRule;
-import boofcv.struct.feature.BrightFeature;
+import boofcv.struct.feature.TupleDesc_F64;
 import boofcv.struct.image.GrayF32;
 import boofcv.struct.image.GrayS16;
 import boofcv.struct.image.GrayU8;
 import georegression.struct.line.LineParametric2D_F32;
 import georegression.struct.point.Point2D_I32;
-import org.ddogleg.struct.FastQueue;
+import org.ddogleg.struct.DogArray;
 import org.openjdk.jmh.annotations.*;
 
 import java.util.List;
@@ -70,15 +70,15 @@ public class BenchmarkImageProcessing {
     ConfigHoughGradient configGradient = new ConfigHoughGradient(2,80,5,1f,0);
     ConfigParamPolar configPolar = new ConfigParamPolar(5,180);
     ConfigParamFoot configFoot = new ConfigParamFoot(); // configured below too
-    FastQueue<Point2D_I32> points = new FastQueue<>(Point2D_I32::new);
+    DogArray<Point2D_I32> points = new DogArray<>(Point2D_I32::new);
 
     // use filter interface since it's easier to profile
     BlurFilter<GrayU8> gaussianBlur;
     InputToBinary<GrayU8> threshMean;
     ImageGradient<GrayU8, GrayS16> sobel;
 
-    DetectDescribePoint<GrayF32, BrightFeature> surf;
-    DetectDescribePoint<GrayF32, BrightFeature> sift;
+    DetectDescribePoint<GrayF32, TupleDesc_F64> surf;
+    DetectDescribePoint<GrayF32, TupleDesc_F64> sift;
 
     // OpenCV most likely implements just the weighted variant. That's likely because it's used for chessboard detection
     GeneralFeatureDetector<GrayU8,GrayS16> goodFeats;
@@ -133,23 +133,19 @@ public class BenchmarkImageProcessing {
         sift = FactoryDetectDescribe.sift(new ConfigCompleteSift(0,5,12000),GrayF32.class);
     }
 
-    @Benchmark
-    public void gaussianBlur() {
+    @Benchmark public void gaussianBlur() {
         gaussianBlur.process(grayU8, outputU8);
     }
 
-    @Benchmark
-    public void threshMean() {
+    @Benchmark public void threshMean() {
         threshMean.process(grayU8, outputU8);
     }
 
-    @Benchmark
-    public void sobel() {
+    @Benchmark public void sobel() {
         sobel.process(grayU8, output1_S16,output2_S16);
     }
 
-    @Benchmark
-    public void goodFeatures() {
+    @Benchmark public void goodFeatures() {
         // OpenCV implements the unweighted variant
         sobel.process(grayU8, output1_S16,output2_S16);
         goodFeats.process(grayU8,output1_S16,output2_S16,null,null,null);
@@ -162,8 +158,7 @@ public class BenchmarkImageProcessing {
 //        goodFeatsW.process(grayU8,output1_S16,output2_S16,null,null,null);
 //    }
 
-    @Benchmark
-    public void houghPolar() {
+    @Benchmark public void houghPolar() {
         List<LineParametric2D_F32> found = houghPolar.detect(grayU8);
 //        System.out.println("Found Hough "+found.size());
     }
@@ -174,8 +169,7 @@ public class BenchmarkImageProcessing {
 //        houghFoot.detect(grayU8);
 //    }
 
-    @Benchmark
-    public void canny() {
+    @Benchmark public void canny() {
         // BoofCV outputs contour edges. BoofCV has a mandatory blur step which OpenCV doesn't. This
         // makes it closer to the original paper but probably still shouldn't be mandatory.
         canny.process(grayU8,5,50,null);
@@ -188,24 +182,21 @@ public class BenchmarkImageProcessing {
 //        System.out.println("total pixels "+total);
     }
 
-    @Benchmark
-    public void sift() {
+    @Benchmark public void sift() {
         checkGrayF32();
 
         sift.detect(grayF32);
 //        System.out.println("SIFT Detected = "+sift.getNumberOfFeatures());
     }
 
-    @Benchmark
-    public void surf() {
+    @Benchmark public void surf() {
         checkGrayF32();
 
         surf.detect(grayF32);
 //        System.out.println("SURF Detected = "+surf.getNumberOfFeatures());
     }
 
-    @Benchmark
-    public void contourExternal() {
+    @Benchmark public void contourExternal() {
         contourA.process(binaryU8);
         // Load the contours since they are not usable until loaded
         List<ContourPacked> contours = contourA.getContours();
@@ -217,8 +208,7 @@ public class BenchmarkImageProcessing {
 //        System.out.println("total contours "+total);
     }
 
-    @Benchmark
-    public void histogram() {
+    @Benchmark public void histogram() {
         // Histogram looks similar to opencv but not exact
         ImageStatistics.histogram(grayU8,0,histogram);
 //        int total = 0;
@@ -243,5 +233,4 @@ public class BenchmarkImageProcessing {
             binaryU8 = null;
         }
     }
-
 }

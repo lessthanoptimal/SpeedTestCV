@@ -5,7 +5,12 @@ plugins {
 group 'speed'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = 1.8
+java {
+    sourceCompatibility = JavaVersion.VERSION_14
+    targetCompatibility = JavaVersion.VERSION_14
+}
+
+compileJava {options.encoding = "UTF-8"}
 
 repositories {
     mavenCentral()
@@ -25,7 +30,7 @@ sourceSets {
 
 dependencies {
     ['boofcv-core','boofcv-swing','boofcv-ffmpeg','demonstrations'].each
-            { String a -> jmhImplementation group: 'org.boofcv', name: a, version: '0.36' }
+            { String a -> jmhImplementation group: 'org.boofcv', name: a, version: '0.38-SNAPSHOT' }
 
 
     jmhImplementation(project)

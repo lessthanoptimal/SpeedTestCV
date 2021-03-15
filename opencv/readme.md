@@ -9,8 +9,8 @@ pip3 install -r requirements.txt
 python3 benchmark.py
 ```
 
-SIFT and SURF are not included in the pip version of OpenCV. You
-will need to build OpenCV 4.x from source code to get them. However, building
+SURF is not included in the pip version of OpenCV. You
+will need to build OpenCV 4.x from source code to get it. However, building
 building from source code breaks the benchmark rule of using the most common
 and easiest way to get the library running. FYI some operations,
 such as Guassian blur, run 2x faster and while others are exactly the

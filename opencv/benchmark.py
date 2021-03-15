@@ -57,18 +57,20 @@ def computeCanny():
     # total = sum( len(c) for c in contours )
     # print("total canny contour {}".format(total))
 
-# SIFT and SURF are not included in the standard distribution of Python OpenCV due to legal concerns
+# This has been configured to be the same as the Lowe's paper. 3 layers per octave.
+# It's not clear how many octaves are used and if the first layer is at twice the input as recommend by Lowe but
+# frequently not done due to speed hit
+sift = cv2.SIFT_create(nfeatures=10000, nOctaveLayers=3, contrastThreshold=0.04, edgeThreshold=10, sigma=1.6)
+def detectSift():
+    kp,des = sift.detectAndCompute(img, None)
+    # print("SIFT found {:d}".format(len(kp)))
+
+
+    
+# SURF is not included in the standard distribution of Python OpenCV due to legal concerns
 # Doing a custom build of OpenCV is beyond the scope scope of this benchmark since its only supposed to
 # include what's easily available
 if hasattr(cv2, 'xfeatures2d'):
-    # This has been configured to be the same as the Lowe's paper. 3 layers per octave.
-    # It's not clear how many octaves are used and if the first layer is at twice the input as recommend by Lowe but
-    # frequently not done due to speed hit
-    sift = cv2.xfeatures2d.SIFT_create(nfeatures=10000, nOctaveLayers=3, contrastThreshold=0.04, edgeThreshold=10, sigma=1.6)
-    def detectSift():
-        kp,des = sift.detectAndCompute(img, None)
-        # print("SIFT found {:d}".format(len(kp)))
-
     # original paper had 4 scales per octave
     # threshold tuned to detect 10,000 features
     surf = cv2.xfeatures2d.SURF_create(hessianThreshold=420, nOctaves=4, nOctaveLayers=4, extended=False, upright=False)
@@ -105,22 +107,22 @@ def benchmark( f , num_trials=10):
     return statistics.mean(times)*1000
 
 # Trouble with operations not finishing on Raspberry PI. Steps are take below to mitigate memory use
-print("contour         {:.1f} ms".format(benchmark(contour)))
+print("contour         {:.2f} ms".format(benchmark(contour)))
 img_binary = None
-print("Gaussian Blur   {:.1f} ms".format(benchmark(gaussianBlur)))
-print("meanThresh      {:.1f} ms".format(benchmark(meanThresh)))
-print("gradient sobel  {:.1f} ms".format(benchmark(gradientSobel)))
-print("histogram       {:.1f} ms".format(benchmark(computeHistogram,1)))
-print("canny           {:.1f} ms".format(benchmark(computeCanny)))
+print("Gaussian Blur   {:.2f} ms".format(benchmark(gaussianBlur)))
+print("meanThresh      {:.2f} ms".format(benchmark(meanThresh)))
+print("gradient sobel  {:.2f} ms".format(benchmark(gradientSobel)))
+print("histogram       {:.2f} ms".format(benchmark(computeHistogram,1)))
+print("canny           {:.2f} ms".format(benchmark(computeCanny)))
+print("sift            {:.2f} ms".format(benchmark(detectSift, 10)))
+sift = None
 if hasattr(cv2, 'xfeatures2d'):
-    print("sift            {:.1f} ms".format(benchmark(detectSift, 10)))
-    sift = None
-    print("surf            {:.1f} ms".format(benchmark(detectSurf, 10)))
+    print("surf            {:.2f} ms".format(benchmark(detectSurf, 10)))
     surf = None
 else:
-    print("Skipping SIFT and SURF. Not installed")
-print("good features   {:.1f} ms".format(benchmark(goodFeatures)))
-print("hough polar     {:.1f} ms".format(benchmark(houghLine)))
+    print("Skipping SURF. Not installed")
+print("good features   {:.2f} ms".format(benchmark(goodFeatures)))
+print("hough polar     {:.2f} ms".format(benchmark(houghLine)))
 
 print()
 print("Done!")
